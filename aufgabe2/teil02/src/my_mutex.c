@@ -6,7 +6,7 @@
  * @brief       Protects the FIFO access.
  *********************************************************/
 #include <stdio.h>
-#include <semaphore.h>
+//#include <semaphore.h>
 
 #include "my_mutex.h"
 #include "FIFO.h"

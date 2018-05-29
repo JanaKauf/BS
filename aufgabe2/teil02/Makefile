@@ -45,8 +45,8 @@ install:
 
 clean:
 	@echo -e "${RED}Temporaere Dateien geloescht! ${NC}"
-	rm -f $(TESTDIR)/* $(OBJDIR)/*
-	rm -r -f $(BINDIR)
+	rm -rf $(TESTDIR) $(OBJDIR)
+	rm -rf $(BINDIR)
 
 delete: clean
 	@echo -e "${RED}BINDIR geloescht! ${NC}"
