@@ -38,13 +38,19 @@ static int g_count = 0;    //!< global acces counter as quasi-timestamp - will b
  *  @return     void
  ****************************************************************************************/
 static void vmem_init(void) {
-
     /* Create System V shared memory */
+    // convert a pathname and a project identifier to a System V IPC key
+    key_t key = ftok(SHMKEY, SHMPROCID);
+    TEST_AND_EXIT_ERRNO (key, "Fail to generate key");
 
     /* We are only using the shm, don't set the IPC_CREAT flag */
+    // get an XSI shared memory segment
+    int shm_id = shmget (key, SHMSIZE, 0666); // 0666 flag to grant access to all groups.
+    TEST_AND_EXIT_ERRNO(shm_id, "Fail to get an XSI shared memory segment.");
 
     /* attach shared memory to vmem */
-
+    // XSI attach operation. NULL-> in first available address. 0-> read and write permissions
+    vmem = shmat(shm_id, NULL, 0);
 }
 
 /**
@@ -63,11 +69,73 @@ static void vmem_init(void) {
  *  @return     void
  ****************************************************************************************/
 static void vmem_put_page_into_mem(int address) {
+    // get pageNo
+    int pageNo = address / VMEM_PAGESIZE;
+    TEST_AND_EXIT(pageNo < 0, (stderr, "pageNo out of range\n"));
+    TEST_AND_EXIT(pageNo >= VMEM_NPAGES, (stderr, "pageNo out of range\n"));
+
+    // check g_count if passed TIME_WINDOW if so memory manager will update aging
+    if(g_count % TIME_WINDOW == 0) {
+
+    }
+
+    // if page not present
+    if ((vmem->pt[pageNo].flags & PTF_PRESENT) == 0) {
+
+    }
+
 }
 
 int vmem_read(int address) {
+    // if memory does not exist yet.
+    if (vmem == NULL) {
+        vmem_init ();
+    }
+
+    g_count++;
+    vmem_put_page_into_mem (address);
+
+    // get pageNo
+    int pageNo = address / VMEM_PAGESIZE;
+    TEST_AND_EXIT(pageNo < 0, (stderr, "pageNo out of range\n"));
+    TEST_AND_EXIT(pageNo >= VMEM_NPAGES, (stderr, "pageNo out of range\n"));
+
+    // get offset from pageNo
+    int page_offset = address - pageNo * VMEM_PAGESIZE;
+    // get offset from vmem
+    int vmem_offset = vmem->pt[pageNo].frame * VMEM_PAGESIZE;
+
+    //update flag
+    vmem->pt[pageNo].flags |= PTF_REF;
+
+    return vmem->mainMemory[vmem_offset + page_offset];
 }
 
 void vmem_write(int address, int data) {
+    // if memory does not exist yet.
+    if (vmem == NULL) {
+        vmem_init();
+    }
+
+    //timer increment
+    g_count++;
+    vmem_put_page_into_mem (address);
+
+    // get pageNo
+    int pageNo = address / VMEM_PAGESIZE;
+    TEST_AND_EXIT(pageNo < 0, (stderr, "pageNo out of range\n"));
+    TEST_AND_EXIT(pageNo >= VMEM_NPAGES, (stderr, "pageNo out of range\n"));
+
+    // get offset from pageNo
+    int page_offset = address - pageNo * VMEM_PAGESIZE;
+    // get offset from vmem
+    int vmem_offset = vmem->pt[pageNo].frame * VMEM_PAGESIZE;
+
+    // update flags
+    vmem->pt[pageNo].flags |= PTF_DIRTY;
+    vmem->pt[pageNo].flags |= PTF_REF;
+
+    //write data
+    vmem->mainMemory[vmem_offset + page_offset] = data;
 }
 // EOF

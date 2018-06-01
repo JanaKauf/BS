@@ -267,16 +267,16 @@ int main(int argc, char **argv) {
     while(1) {
         struct msg m = waitForMsg();
         switch(m.cmd){
-	   case CMD_PAGEFAULT:
-                 allocate_page(m.value, m.g_count);
-              break;
-           case CMD_TIME_INTER_VAL:
+            case CMD_PAGEFAULT:
+                allocate_page(m.value, m.g_count);
+                break;
+            case CMD_TIME_INTER_VAL:
                 if (pageRepAlgo == find_remove_aging) {
                    update_age_reset_ref();
                 }
-              break;
-           default:
-              TEST_AND_EXIT(true, (stderr, "Unexpected command received from vmapp\n"));
+                break;
+            default:
+                TEST_AND_EXIT(true, (stderr, "Unexpected command received from vmapp\n"));
         }
         sendAck();
     }
@@ -324,7 +324,7 @@ void print_usage_info_and_exit(char *err_str, char *programName) {
 }
 
 void sighandler(int signo) {
-if(signo == SIGUSR2) {
+    if(signo == SIGUSR2) {
         dump_pt();
     } else if(signo == SIGINT) {
         cleanup();
@@ -374,18 +374,30 @@ void cleanup(void) {
 }
 
 void vmem_init(void) {
-
     /* Create System V shared memory */
+    key_t key = ftok (SHMKEY, SHMPROCID);
+    TEST_AND_EXIT_ERRNO (key, "Fail to generate key");
 
     /* We are creating the shm, so set the IPC_CREAT flag */
+    shm_id = shmget (key, SHMSIZE, IPC_CREAT);
+    TEST_AND_EXIT_ERRNO (shm_id, "Fail to get an XSI shared memory segment.");
 
     /* Attach shared memory to vmem (virtual memory) */
+    vmem = shmat (shm_id, NULL, 0);
 
     /* Fill with zeros */
     memset(vmem, 0, SHMSIZE);
 }
 
 int find_unused_frame() {
+    int i;
+
+    for (i = 0; i <= VMEM_NFRAMES; i++) {
+        if (vmem->pt[i].frame == 0) {
+            return i;
+        }
+    }
+    return VOID_IDX;
 }
 
 void allocate_page(const int req_page, const int g_count) {
@@ -406,6 +418,7 @@ void removePage(int page) {
 }
 
 void find_remove_fifo(int page, int * removedPage, int *frame){
+
 }
 
 static void find_remove_aging(int page, int * removedPage, int *frame){

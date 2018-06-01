@@ -1,7 +1,7 @@
 /*
  * main.c
  *  Created on: 05.05.2018
- *      Author: Janaina Flor Kaufmann
+ *      Author: Janaina Flor Kaufmann, Vadim Bugadov
  */
 
 
@@ -168,7 +168,7 @@ main (void) {
                   "Fail to create -thread_control");
 
     printf(MAG"Join thread_control...\n"RESET);
-    errorhandler (pthread_join(thread_control, NULL),
+	errorhandler (pthread_join(thread_control, NULL),
                   "Fail to join -thread_control-");
 
     return 0;
