@@ -401,6 +401,22 @@ int find_unused_frame() {
 }
 
 void allocate_page(const int req_page, const int g_count) {
+    struct logevent le;
+
+    int frame = find_unused_frame ();
+    int removedPage = VOID_IDX;
+
+    if (frame == VOID_IDX) {
+        pageRepAlgo(req_page, &removedPage, &frame);
+        vmem->pt[removedPage].frame = VOID_IDX;
+
+        if(vmem->pt[removedPage].flags & PTF_DIRTY){
+        }
+
+    } else {
+        le.replaced_page = VOID_IDX;
+
+    }
 
     /* Log action */
     le.req_pageno = req_page;
@@ -412,19 +428,59 @@ void allocate_page(const int req_page, const int g_count) {
 }
 
 void fetchPage(int page, int frame){
+    fetch_page_from_pagefile (page, &frame);
 }
 
 void removePage(int page) {
+
 }
 
 void find_remove_fifo(int page, int * removedPage, int *frame){
+    static int first_queue = VOID_IDX;
+    first_queue++;
+    first_queue = first_queue % VMEM_NFRAMES;
+
+    *frame = first_queue;
+    int i;
+    for (i = 0; i < VMEM_NPAGES; i++) {
+        if (vmem->pt[i].frame == *frame) {
+            *removedPage = i;
+            break;
+        }
+    }
 
 }
 
 static void find_remove_aging(int page, int * removedPage, int *frame){
+    unsigned char least_refered = 0xFF;
+
+    int i;
+    for (i = 0; i < VMEM_NPAGES; i++) {
+        if (vmem->pt[i].frame != VOID_IDX) {
+            if (age[vmem->pt[i].frame].age <= least_refered) {
+                least_refered = age[vmem->pt[i].frame].age;
+                *removedPage = i;
+                *frame = vmem->pt[i].frame;
+            }
+        }
+    }
 }
 
 static void update_age_reset_ref(void) {
+    int i;
+
+    for (i = 0; i < VMEM_NPAGES; i++) {
+        if (vmem->pt[i].frame != VOID_IDX) {
+            age[vmem->pt[i].frame].age = age[vmem->pt[i].frame].age >> 1;
+            age[vmem->pt[i].frame].page = i;
+        }
+        if (vmem->pt[i].flags == PTF_REF) {
+            age[vmem->pt[i].frame].age = age[vmem->pt[i].frame].age | 0x80;
+
+            vmem->pt[i].flags &= ~PTF_REF;
+
+        }
+    }
 } 
 
 static void find_remove_clock(int page, int * removedPage, int *frame){

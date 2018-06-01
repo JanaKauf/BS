@@ -29,8 +29,8 @@
 /* Sizes */
 #define VMEM_VIRTMEMSIZE 1024           //!< Size of virtual address space of the process
 #define VMEM_PHYSMEMSIZE  128           //!< Size of physical memory
-#define VMEM_NPAGES     (VMEM_VIRTMEMSIZE / VMEM_PAGESIZE)	//!< Total number of pages 
-#define VMEM_NFRAMES (VMEM_PHYSMEMSIZE / VMEM_PAGESIZE)		//!< Total number of (page) frames 
+#define VMEM_NPAGES     (VMEM_VIRTMEMSIZE / VMEM_PAGESIZE)  //!< Total number of pages
+#define VMEM_NFRAMES (VMEM_PHYSMEMSIZE / VMEM_PAGESIZE)     //!< Total number of (page) frames
 
 /**
  * page table flags used by this simulation

@@ -42,9 +42,9 @@ struct msg {
    int ref;
 };
 
-#define CMD_PAGEFAULT		1	// value gibt die einzulagernde Page mit
-#define CMD_TIME_INTER_VAL   	2	// Ein Time Interval ist abgelaufen
-#define CMD_ACK 		3	// value hat keine Bedeutung
+#define CMD_PAGEFAULT       1 // value gibt die einzulagernde Page mit
+#define CMD_TIME_INTER_VAL  2 // Ein Time Interval ist abgelaufen
+#define CMD_ACK             3 // value hat keine Bedeutung
 
 /**
  * @brief  Diese Funktion erzeugt die Ressourcen, die zum synchronnen Austausch

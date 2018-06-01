@@ -35,7 +35,7 @@ static struct msg *sharedData = NULL;
 static sem_t *wakeupMManager = SEM_FAILED;   //!< Named semaphores that informs memory manager about a new task
 static sem_t *wakeupVmApp = SEM_FAILED;      //!< Named semaphores that informs vmapp that task has been finished
 static bool nextOpWaitForMsg = true;         //!< For checking correct order of waitForMsg and reply (sendAck)
-static int refNoForAck = -1;	             //!< waitForMsg stores refCounter of msg for sendAck
+static int refNoForAck = -1;                 //!< waitForMsg stores refCounter of msg for sendAck
 
 /**
  * @brief  Diese Funktion erzeugt die Ressourcen, die zum synchronnen Austausch
@@ -44,27 +44,29 @@ static int refNoForAck = -1;	             //!< waitForMsg stores refCounter of m
  *                  aufgesetzt. Ansonsten für den Client.
  */
 static void setupSyncDataExchangeInternal(bool isServer) {
-   // create shared memory for data to be exchanged
-   PRINT_DEBUG((stderr,"setupSyncDataExchangeInternal: Attach to shared memory\n"));
-   key_t shm_key = ftok(SHMKEY_SYNC_COM, SHMPROCID_SYNC_COM);
-   TEST_AND_EXIT_ERRNO(shm_key == -1, "setupSyncDataExchangeInternal:ftok failed!");
-   // Use IPC:CREAT flag for server only
-   shm_id = shmget(shm_key, sizeof(struct msg), 0664 | ((isServer)?IPC_CREAT:0));
-   TEST_AND_EXIT_ERRNO(shm_id == -1, "setupSyncDataExchangeInternal:shmget failed!");
-   PRINT_DEBUG((stderr, "setupSyncDataExchangeInternal: shmget successfuly allocated %lu bytes\n", sizeof(struct msg)));
-   sharedData = (struct msg *) shmat(shm_id, NULL, 0);
-   TEST_AND_EXIT_ERRNO(sharedData == (struct msg *) -1, "setupSyncDataExchangeInternal: Error attaching shared memory");
-   PRINT_DEBUG((stderr, "setupSyncDataExchangeInternal: Shared memory successfuly attached\n"));
+    // create shared memory for data to be exchanged
+    PRINT_DEBUG((stderr,"setupSyncDataExchangeInternal: Attach to shared memory\n"));
+    key_t shm_key = ftok(SHMKEY_SYNC_COM, SHMPROCID_SYNC_COM);
+    TEST_AND_EXIT_ERRNO(shm_key == -1, "setupSyncDataExchangeInternal:ftok failed!");
+
+    // Use IPC:CREAT flag for server only
+    shm_id = shmget(shm_key, sizeof(struct msg), 0664 | ((isServer)?IPC_CREAT:0));
+    TEST_AND_EXIT_ERRNO(shm_id == -1, "setupSyncDataExchangeInternal:shmget failed!");
+    PRINT_DEBUG((stderr, "setupSyncDataExchangeInternal: shmget successfuly allocated %lu bytes\n", sizeof(struct msg)));
+
+    sharedData = (struct msg *) shmat(shm_id, NULL, 0);
+    TEST_AND_EXIT_ERRNO(sharedData == (struct msg *) -1, "setupSyncDataExchangeInternal: Error attaching shared memory");
+    PRINT_DEBUG((stderr, "setupSyncDataExchangeInternal: Shared memory successfuly attached\n"));
 
 
-   // create semaphore for sync access
-   wakeupMManager = (isServer) ? sem_open(NAMED_SEM_WAKEUP_MMANAGER, O_CREAT | O_EXCL, 0644, 0)
-                               : sem_open(NAMED_SEM_WAKEUP_MMANAGER, 0);
-   TEST_AND_EXIT_ERRNO(wakeupMManager  == SEM_FAILED, "setupSyncDataExchangeInternal: Error creating named semaphore");
-   wakeupVmApp = (isServer) ? sem_open(NAMED_SEM_WAKEUP_VMAPP, O_CREAT | O_EXCL, 0644, 0)
-                            : sem_open(NAMED_SEM_WAKEUP_VMAPP, 0);
-   TEST_AND_EXIT_ERRNO(wakeupVmApp  == SEM_FAILED, "setupSyncDataExchangeInternal: Error creating named semaphore");
-   PRINT_DEBUG((stderr, "setupSyncDataExchangeInternal: semaphores successfully created\n"));
+    // create semaphore for sync access
+    wakeupMManager = (isServer) ? sem_open(NAMED_SEM_WAKEUP_MMANAGER, O_CREAT | O_EXCL, 0644, 0)
+                                       : sem_open(NAMED_SEM_WAKEUP_MMANAGER, 0);
+    TEST_AND_EXIT_ERRNO(wakeupMManager  == SEM_FAILED, "setupSyncDataExchangeInternal: Error creating named semaphore");
+    wakeupVmApp = (isServer) ? sem_open(NAMED_SEM_WAKEUP_VMAPP, O_CREAT | O_EXCL, 0644, 0)
+                    : sem_open(NAMED_SEM_WAKEUP_VMAPP, 0);
+    TEST_AND_EXIT_ERRNO(wakeupVmApp  == SEM_FAILED, "setupSyncDataExchangeInternal: Error creating named semaphore");
+    PRINT_DEBUG((stderr, "setupSyncDataExchangeInternal: semaphores successfully created\n"));
 }
 
 void setupSyncDataExchange(void) {
