@@ -51,6 +51,8 @@ static void vmem_init(void) {
     /* attach shared memory to vmem */
     // XSI attach operation. NULL-> in first available address. 0-> read and write permissions
     vmem = shmat(shm_id, NULL, 0);
+
+    //setupSyncDataExchangeInternal(false);
 }
 
 /**
@@ -76,12 +78,20 @@ static void vmem_put_page_into_mem(int address) {
 
     // check g_count if passed TIME_WINDOW if so memory manager will update aging
     if(g_count % TIME_WINDOW == 0) {
+        struct msg message;
+        message.cmd = CMD_TIME_INTER_VAL;
+        message.g_count = g_count;
 
+        sendMsgToMmanager (message);
     }
 
     // if page not present
     if ((vmem->pt[pageNo].flags & PTF_PRESENT) == 0) {
+        struct msg message;
 
+        message.cmd = CMD_PAGEFAULT;
+
+        sendMsgToMmanager (message);
     }
 
 }
@@ -101,14 +111,12 @@ int vmem_read(int address) {
     TEST_AND_EXIT(pageNo >= VMEM_NPAGES, (stderr, "pageNo out of range\n"));
 
     // get offset from pageNo
-    int page_offset = address - pageNo * VMEM_PAGESIZE;
-    // get offset from vmem
-    int vmem_offset = vmem->pt[pageNo].frame * VMEM_PAGESIZE;
+    int offset = address % VMEM_PAGESIZE;
 
     //update flag
     vmem->pt[pageNo].flags |= PTF_REF;
 
-    return vmem->mainMemory[vmem_offset + page_offset];
+    return vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset];
 }
 
 void vmem_write(int address, int data) {
@@ -127,15 +135,21 @@ void vmem_write(int address, int data) {
     TEST_AND_EXIT(pageNo >= VMEM_NPAGES, (stderr, "pageNo out of range\n"));
 
     // get offset from pageNo
-    int page_offset = address - pageNo * VMEM_PAGESIZE;
-    // get offset from vmem
-    int vmem_offset = vmem->pt[pageNo].frame * VMEM_PAGESIZE;
+    int offset = address % VMEM_PAGESIZE;
 
     // update flags
     vmem->pt[pageNo].flags |= PTF_DIRTY;
     vmem->pt[pageNo].flags |= PTF_REF;
 
     //write data
-    vmem->mainMemory[vmem_offset + page_offset] = data;
+    vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset] = data;
+}
+
+void
+vmem_close() {
+    key_t key = ftok (SHMKEY, SHMPROCID);
+    int shm_id = shmget (key, SHMSIZE, 0666);
+    shmctl (shm_id, IPC_RMID, NULL);
+    free(vmem);
 }
 // EOF

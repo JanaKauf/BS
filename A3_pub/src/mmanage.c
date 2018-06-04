@@ -371,6 +371,8 @@ void dump_pt(void) {
 /* Your code goes here... */
 
 void cleanup(void) {
+    shmctl(shm_id, IPC_RMID, NULL);
+    free (vmem);
 }
 
 void vmem_init(void) {
@@ -387,14 +389,19 @@ void vmem_init(void) {
 
     /* Fill with zeros */
     memset(vmem, 0, SHMSIZE);
+
+    int i;
+    for (i = 0 ; i < VMEM_NPAGES; i ++) {
+        vmem->pt[i].frame = VOID_IDX;
+    }
 }
 
 int find_unused_frame() {
     int i;
 
     for (i = 0; i <= VMEM_NFRAMES; i++) {
-        if (vmem->pt[i].frame == 0) {
-            return i;
+        if (vmem->mainMemory[i / VMEM_PAGESIZE] == VOID_IDX) {
+            return i/VMEM_PAGESIZE;
         }
     }
     return VOID_IDX;
@@ -408,15 +415,14 @@ void allocate_page(const int req_page, const int g_count) {
 
     if (frame == VOID_IDX) {
         pageRepAlgo(req_page, &removedPage, &frame);
-        vmem->pt[removedPage].frame = VOID_IDX;
 
-        if(vmem->pt[removedPage].flags & PTF_DIRTY){
-        }
-
-    } else {
-        le.replaced_page = VOID_IDX;
-
+       removePage (removedPage);
     }
+
+    fetchPage (req_page, frame);
+
+    vmem->pt[req_page].flags = PTF_PRESENT;
+    vmem->pt[req_page].frame = frame;
 
     /* Log action */
     le.req_pageno = req_page;
@@ -432,13 +438,23 @@ void fetchPage(int page, int frame){
 }
 
 void removePage(int page) {
+    int i;
+    for (i = 0; i < VMEM_PAGESIZE; i++) {
+        vmem->mainMemory[vmem->pt[page].frame * VMEM_PAGESIZE + 1] = 0;
+    }
+
+    vmem->pt[page].frame = VOID_IDX;
+
+    if(vmem->pt[page].flags & PTF_DIRTY){
+        store_page_to_pagefile (page, vmem->mainMemory + find_unused_frame () * VMEM_PAGESIZE);
+    }
+    vmem->pt[page].flags = 0;
 
 }
 
 void find_remove_fifo(int page, int * removedPage, int *frame){
     static int first_queue = VOID_IDX;
-    first_queue++;
-    first_queue = first_queue % VMEM_NFRAMES;
+    first_queue = (first_queue + 1) % VMEM_NFRAMES;
 
     *frame = first_queue;
     int i;
@@ -484,6 +500,18 @@ static void update_age_reset_ref(void) {
 } 
 
 static void find_remove_clock(int page, int * removedPage, int *frame){
+    static int i = VOID_IDX;
+
+    i = (i + 1) % VMEM_NPAGES;
+
+    while (vmem->pt[i].flags & PTF_REF) {
+        vmem->pt[i].flags &= ~PTF_REF;
+        i = (i + 1) % VMEM_NPAGES;
+    }
+
+    *removedPage = i;
+    *frame = vmem->pt[i].frame;
+
 }
 
 // EOF
