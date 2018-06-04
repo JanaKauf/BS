@@ -41,12 +41,12 @@ static void vmem_init(void) {
     /* Create System V shared memory */
     // convert a pathname and a project identifier to a System V IPC key
     key_t key = ftok(SHMKEY, SHMPROCID);
-    TEST_AND_EXIT_ERRNO (key, "Fail to generate key");
+    TEST_AND_EXIT (key == -1, (stderr, "Fail to generate key"));
 
     /* We are only using the shm, don't set the IPC_CREAT flag */
     // get an XSI shared memory segment
     int shm_id = shmget (key, SHMSIZE, 0666); // 0666 flag to grant access to all groups.
-    TEST_AND_EXIT_ERRNO(shm_id, "Fail to get an XSI shared memory segment.");
+    TEST_AND_EXIT(shm_id == -1,(stderr, "Fail to get an XSI shared memory segment."));
 
     /* attach shared memory to vmem */
     // XSI attach operation. NULL-> in first available address. 0-> read and write permissions

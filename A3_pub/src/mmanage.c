@@ -371,6 +371,7 @@ void dump_pt(void) {
 /* Your code goes here... */
 
 void cleanup(void) {
+    destroySyncDataExchange();
     shmctl(shm_id, IPC_RMID, NULL);
     free (vmem);
 }
@@ -378,22 +379,17 @@ void cleanup(void) {
 void vmem_init(void) {
     /* Create System V shared memory */
     key_t key = ftok (SHMKEY, SHMPROCID);
-    TEST_AND_EXIT_ERRNO (key, "Fail to generate key");
+    TEST_AND_EXIT(key == -1, (stderr, "Fail to generate key"));
 
     /* We are creating the shm, so set the IPC_CREAT flag */
-    shm_id = shmget (key, SHMSIZE, IPC_CREAT);
-    TEST_AND_EXIT_ERRNO (shm_id, "Fail to get an XSI shared memory segment.");
+    shm_id = shmget (key, SHMSIZE, IPC_CREAT | 0666);
+    TEST_AND_EXIT(shm_id == -1, (stderr, "Fail to create shm_id"));
 
     /* Attach shared memory to vmem (virtual memory) */
     vmem = shmat (shm_id, NULL, 0);
 
     /* Fill with zeros */
     memset(vmem, 0, SHMSIZE);
-
-    int i;
-    for (i = 0 ; i < VMEM_NPAGES; i ++) {
-        vmem->pt[i].frame = VOID_IDX;
-    }
 }
 
 int find_unused_frame() {
@@ -439,9 +435,6 @@ void fetchPage(int page, int frame){
 
 void removePage(int page) {
     int i;
-    for (i = 0; i < VMEM_PAGESIZE; i++) {
-        vmem->mainMemory[vmem->pt[page].frame * VMEM_PAGESIZE + 1] = 0;
-    }
 
     vmem->pt[page].frame = VOID_IDX;
 
