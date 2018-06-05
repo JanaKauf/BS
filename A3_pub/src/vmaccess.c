@@ -110,13 +110,14 @@ int vmem_read(int address) {
     TEST_AND_EXIT(pageNo >= VMEM_NPAGES, (stderr, "pageNo out of range\n"));
 
     // get offset from pageNo
-    int offset = address % VMEM_PAGESIZE;
+    //int offset = address % VMEM_PAGESIZE;
 
     //update flag
     vmem->pt[pageNo].flags |= PTF_REF;
     g_count++;
 
-    return vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset];
+    //return vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset];
+    return vmem->mainMemory[address];
 }
 
 void vmem_write(int address, int data) {
@@ -125,7 +126,6 @@ void vmem_write(int address, int data) {
         vmem_init();
     }
 
-    //timer increment
     vmem_put_page_into_mem (address);
 
     // get pageNo
@@ -134,15 +134,17 @@ void vmem_write(int address, int data) {
     TEST_AND_EXIT(pageNo >= VMEM_NPAGES, (stderr, "pageNo out of range\n"));
 
     // get offset from pageNo
-    int offset = address % VMEM_PAGESIZE;
+    //int offset = address % VMEM_PAGESIZE;
 
     // update flags
     vmem->pt[pageNo].flags |= PTF_DIRTY;
     vmem->pt[pageNo].flags |= PTF_REF;
+    //timer increment
     g_count++;
 
     //write data
-    vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset] = data;
+    //vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset] = data;
+    vmem->mainMemory[address] = data;
 }
 
 void

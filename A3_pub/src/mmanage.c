@@ -372,8 +372,6 @@ void dump_pt(void) {
 
 void cleanup(void) {
     destroySyncDataExchange();
-    shmctl(shm_id, IPC_RMID, NULL);
-    free (vmem);
 }
 
 void vmem_init(void) {
