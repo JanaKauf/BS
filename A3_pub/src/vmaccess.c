@@ -76,14 +76,6 @@ static void vmem_put_page_into_mem(int address) {
     TEST_AND_EXIT(pageNo < 0, (stderr, "pageNo out of range\n"));
     TEST_AND_EXIT(pageNo >= VMEM_NPAGES, (stderr, "pageNo out of range\n"));
 
-    // check g_count if passed TIME_WINDOW if so memory manager will update aging
-    if(g_count % TIME_WINDOW == 0) {
-        struct msg message;
-        message.cmd = CMD_TIME_INTER_VAL;
-        message.g_count = g_count;
-
-        sendMsgToMmanager (message);
-    }
 
     // if page not present
     if ((vmem->pt[pageNo].flags & PTF_PRESENT) == 0) {
@@ -91,6 +83,7 @@ static void vmem_put_page_into_mem(int address) {
 
         message.cmd = CMD_PAGEFAULT;
         message.value = pageNo;
+        message.g_count = g_count;
 
         sendMsgToMmanager (message);
     }
@@ -104,6 +97,7 @@ int vmem_read(int address) {
     }
 
     vmem_put_page_into_mem (address);
+    g_count++;
 
     // get pageNo
     int pageNo = address / VMEM_PAGESIZE;
@@ -115,10 +109,17 @@ int vmem_read(int address) {
 
     //update flag
     vmem->pt[pageNo].flags |= PTF_REF;
-    g_count++;
 
-    //return vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset];
-    return vmem->mainMemory[address];
+    // check g_count if passed TIME_WINDOW if so memory manager will update aging
+    if(g_count % TIME_WINDOW == 0) {
+        struct msg message;
+        message.cmd = CMD_TIME_INTER_VAL;
+        message.g_count = g_count;
+
+        sendMsgToMmanager (message);
+    }
+
+    return vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset];
 }
 
 void vmem_write(int address, int data) {
@@ -128,6 +129,7 @@ void vmem_write(int address, int data) {
     }
 
     vmem_put_page_into_mem (address);
+    g_count++;
 
     // get pageNo
     int pageNo = address / VMEM_PAGESIZE;
@@ -140,12 +142,18 @@ void vmem_write(int address, int data) {
     // update flags
     vmem->pt[pageNo].flags |= PTF_DIRTY;
     vmem->pt[pageNo].flags |= PTF_REF;
-    //timer increment
-    g_count++;
+
+    // check g_count if passed TIME_WINDOW if so memory manager will update aging
+    if(g_count % TIME_WINDOW == 0) {
+        struct msg message;
+        message.cmd = CMD_TIME_INTER_VAL;
+        message.g_count = g_count;
+
+        sendMsgToMmanager (message);
+    }
 
     //write data
-    //vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset] = data;
-    vmem->mainMemory[address] = data;
+    vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset] = data;
 }
 
 void

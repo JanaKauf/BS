@@ -268,6 +268,7 @@ int main(int argc, char **argv) {
         struct msg m = waitForMsg();
         switch(m.cmd){
             case CMD_PAGEFAULT:
+                pf_count++;
                 allocate_page(m.value, m.g_count);
                 break;
             case CMD_TIME_INTER_VAL:
@@ -387,17 +388,21 @@ void vmem_init(void) {
     vmem = shmat (shm_id, NULL, 0);
 
     /* Fill with zeros */
-    memset(vmem, -1, SHMSIZE);
+    memset(vmem, 0, SHMSIZE);
+    int i;
+    for (i = 0; i < VMEM_NPAGES; i++) {
+        vmem->pt[i].frame = VOID_IDX;
+    }
 }
 
 int find_unused_frame() {
-    int i;
+    static int i = -1;
 
-    for (i = 0; i <= VMEM_NFRAMES; i++) {
-        if (vmem->mainMemory[i / VMEM_PAGESIZE] == VOID_IDX) {
-            return i/VMEM_PAGESIZE;
-        }
+    if (i < VMEM_NFRAMES - 1) {
+        i++;
+        return i;
     }
+
     return VOID_IDX;
 }
 
@@ -409,10 +414,14 @@ void allocate_page(const int req_page, const int g_count) {
 
     if (frame == VOID_IDX) {
         pageRepAlgo(req_page, &removedPage, &frame);
+        printf ("page fault %d\n", pf_count);
+        int i;
+        for (i = 0; i < 16; i++) {
+            printf ("age[%d] %d\n", i, age[i].age);
+        }
     }
 
     fetchPage (req_page, frame);
-
 
     /* Log action */
     le.req_pageno = req_page;
@@ -462,15 +471,15 @@ static void find_remove_aging(int page, int * removedPage, int *frame){
     unsigned char least_refered = 0xFF;
 
     int i;
-    for (i = 0; i < VMEM_NPAGES; i++) {
-        if (vmem->pt[i].frame != VOID_IDX) {
-            if (age[vmem->pt[i].frame].age <= least_refered) {
-                least_refered = age[vmem->pt[i].frame].age;
-                *removedPage = i;
-                *frame = vmem->pt[i].frame;
-            }
+    for (i = 0; i < VMEM_NFRAMES; i++) {
+        if (age[i].age <= least_refered) {
+            least_refered = age[i].age;
+            *frame = i;
+            *removedPage = age[i].page;
         }
     }
+
+    age[*frame].age = 0x80;
     removePage (*removedPage);
 }
 
@@ -479,14 +488,14 @@ static void update_age_reset_ref(void) {
 
     for (i = 0; i < VMEM_NPAGES; i++) {
         if (vmem->pt[i].frame != VOID_IDX) {
-            age[vmem->pt[i].frame].age = age[vmem->pt[i].frame].age >> 1;
+            age[vmem->pt[i].frame].age >>= 1;
             age[vmem->pt[i].frame].page = i;
-        }
-        if (vmem->pt[i].flags == PTF_REF) {
-            age[vmem->pt[i].frame].age = age[vmem->pt[i].frame].age | 0x80;
 
-            vmem->pt[i].flags &= ~PTF_REF;
+            if ((vmem->pt[i].flags & PTF_REF) == PTF_REF) {
+                age[vmem->pt[i].frame].age |= 0x80;
+                vmem->pt[i].flags &= ~PTF_REF;
 
+            }
         }
     }
 } 
@@ -494,18 +503,25 @@ static void update_age_reset_ref(void) {
 static void find_remove_clock(int page, int * removedPage, int *frame){
     static int i = VOID_IDX;
 
-    i = (i + 1) % VMEM_NPAGES;
+    i = (i + 1) % VMEM_NFRAMES;
 
-    while (vmem->pt[i].flags & PTF_REF) {
-        vmem->pt[i].flags &= ~PTF_REF;
-        i = (i + 1) % VMEM_NPAGES;
+    int j = 0;
+    while (1) {
+        if (vmem->pt[j].frame == i) {
+            if ((vmem->pt[j].flags & PTF_REF) == PTF_REF) {
+                vmem->pt[j].flags &= ~PTF_REF;
+                i = (i + 1) % VMEM_NFRAMES;
+            } else {
+                break;
+            }
+        }
+        j = (j + 1) % VMEM_NPAGES;
     }
 
-    *removedPage = i;
-    *frame = vmem->pt[i].frame;
+    *removedPage = j;
+    *frame = vmem->pt[j].frame;
 
     removePage (*removedPage);
-
 }
 
 // EOF
