@@ -90,6 +90,7 @@ static void vmem_put_page_into_mem(int address) {
         struct msg message;
 
         message.cmd = CMD_PAGEFAULT;
+        message.value = pageNo;
 
         sendMsgToMmanager (message);
     }
@@ -110,7 +111,7 @@ int vmem_read(int address) {
     TEST_AND_EXIT(pageNo >= VMEM_NPAGES, (stderr, "pageNo out of range\n"));
 
     // get offset from pageNo
-    //int offset = address % VMEM_PAGESIZE;
+    int offset = address % VMEM_PAGESIZE;
 
     //update flag
     vmem->pt[pageNo].flags |= PTF_REF;
@@ -134,7 +135,7 @@ void vmem_write(int address, int data) {
     TEST_AND_EXIT(pageNo >= VMEM_NPAGES, (stderr, "pageNo out of range\n"));
 
     // get offset from pageNo
-    //int offset = address % VMEM_PAGESIZE;
+    int offset = address % VMEM_PAGESIZE;
 
     // update flags
     vmem->pt[pageNo].flags |= PTF_DIRTY;

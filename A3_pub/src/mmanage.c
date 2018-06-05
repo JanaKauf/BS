@@ -413,8 +413,6 @@ void allocate_page(const int req_page, const int g_count) {
 
     fetchPage (req_page, frame);
 
-    vmem->pt[req_page].flags = PTF_PRESENT;
-    vmem->pt[req_page].frame = frame;
 
     /* Log action */
     le.req_pageno = req_page;
@@ -426,15 +424,18 @@ void allocate_page(const int req_page, const int g_count) {
 }
 
 void fetchPage(int page, int frame){
-    fetch_page_from_pagefile (page, &frame);
+
+    int * pframe = &vmem->mainMemory[frame * VMEM_PAGESIZE];
+    fetch_page_from_pagefile (page, pframe);
 
     vmem->pt[page].frame = frame;
     vmem->pt[page].flags |= PTF_PRESENT;
+
 }
 
 void removePage(int page) {
     if((vmem->pt[page].flags & PTF_DIRTY) == PTF_DIRTY){
-        store_page_to_pagefile (page, vmem->mainMemory + find_unused_frame () * VMEM_PAGESIZE);
+        store_page_to_pagefile (page, &vmem->mainMemory[vmem->pt[page].frame * VMEM_PAGESIZE]);
     }
     vmem->pt[page].flags = 0;
     vmem->pt[page].frame = VOID_IDX;
