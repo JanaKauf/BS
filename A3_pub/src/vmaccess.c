@@ -41,12 +41,12 @@ static void vmem_init(void) {
     /* Create System V shared memory */
     // convert a pathname and a project identifier to a System V IPC key
     key_t key = ftok(SHMKEY, SHMPROCID);
-    TEST_AND_EXIT (key == -1, (stderr, "Fail to generate key"));
+    TEST_AND_EXIT_ERRNO(key == -1, "Fail to generate key");
 
     /* We are only using the shm, don't set the IPC_CREAT flag */
     // get an XSI shared memory segment
     int shm_id = shmget (key, SHMSIZE, 0666); // 0666 flag to grant access to all groups.
-    TEST_AND_EXIT(shm_id == -1,(stderr, "Fail to get an XSI shared memory segment."));
+    TEST_AND_EXIT_ERRNO(shm_id == -1, "Fail to get an XSI shared memory segment");
 
     /* attach shared memory to vmem */
     // XSI attach operation. NULL-> in first available address. 0-> read and write permissions
@@ -102,7 +102,6 @@ int vmem_read(int address) {
         vmem_init ();
     }
 
-    g_count++;
     vmem_put_page_into_mem (address);
 
     // get pageNo
@@ -115,6 +114,7 @@ int vmem_read(int address) {
 
     //update flag
     vmem->pt[pageNo].flags |= PTF_REF;
+    g_count++;
 
     return vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset];
 }
@@ -126,7 +126,6 @@ void vmem_write(int address, int data) {
     }
 
     //timer increment
-    g_count++;
     vmem_put_page_into_mem (address);
 
     // get pageNo
@@ -140,6 +139,7 @@ void vmem_write(int address, int data) {
     // update flags
     vmem->pt[pageNo].flags |= PTF_DIRTY;
     vmem->pt[pageNo].flags |= PTF_REF;
+    g_count++;
 
     //write data
     vmem->mainMemory[(vmem->pt[pageNo].frame * VMEM_PAGESIZE) + offset] = data;

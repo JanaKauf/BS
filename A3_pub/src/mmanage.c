@@ -379,17 +379,17 @@ void cleanup(void) {
 void vmem_init(void) {
     /* Create System V shared memory */
     key_t key = ftok (SHMKEY, SHMPROCID);
-    TEST_AND_EXIT(key == -1, (stderr, "Fail to generate key"));
+    TEST_AND_EXIT_ERRNO(key == -1, "Fail to generate key");
 
     /* We are creating the shm, so set the IPC_CREAT flag */
     shm_id = shmget (key, SHMSIZE, IPC_CREAT | 0666);
-    TEST_AND_EXIT(shm_id == -1, (stderr, "Fail to create shm_id"));
+    TEST_AND_EXIT_ERRNO(shm_id == -1, "Fail to create shm_id");
 
     /* Attach shared memory to vmem (virtual memory) */
     vmem = shmat (shm_id, NULL, 0);
 
     /* Fill with zeros */
-    memset(vmem, 0, SHMSIZE);
+    memset(vmem, -1, SHMSIZE);
 }
 
 int find_unused_frame() {
@@ -411,8 +411,6 @@ void allocate_page(const int req_page, const int g_count) {
 
     if (frame == VOID_IDX) {
         pageRepAlgo(req_page, &removedPage, &frame);
-
-       removePage (removedPage);
     }
 
     fetchPage (req_page, frame);
@@ -431,17 +429,17 @@ void allocate_page(const int req_page, const int g_count) {
 
 void fetchPage(int page, int frame){
     fetch_page_from_pagefile (page, &frame);
+
+    vmem->pt[page].frame = frame;
+    vmem->pt[page].flags |= PTF_PRESENT;
 }
 
 void removePage(int page) {
-    int i;
-
-    vmem->pt[page].frame = VOID_IDX;
-
-    if(vmem->pt[page].flags & PTF_DIRTY){
+    if((vmem->pt[page].flags & PTF_DIRTY) == PTF_DIRTY){
         store_page_to_pagefile (page, vmem->mainMemory + find_unused_frame () * VMEM_PAGESIZE);
     }
     vmem->pt[page].flags = 0;
+    vmem->pt[page].frame = VOID_IDX;
 
 }
 
@@ -457,6 +455,7 @@ void find_remove_fifo(int page, int * removedPage, int *frame){
             break;
         }
     }
+    removePage (*removedPage);
 
 }
 
@@ -473,6 +472,7 @@ static void find_remove_aging(int page, int * removedPage, int *frame){
             }
         }
     }
+    removePage (*removedPage);
 }
 
 static void update_age_reset_ref(void) {
@@ -504,6 +504,8 @@ static void find_remove_clock(int page, int * removedPage, int *frame){
 
     *removedPage = i;
     *frame = vmem->pt[i].frame;
+
+    removePage (*removedPage);
 
 }
 
