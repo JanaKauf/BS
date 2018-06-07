@@ -414,11 +414,6 @@ void allocate_page(const int req_page, const int g_count) {
 
     if (frame == VOID_IDX) {
         pageRepAlgo(req_page, &removedPage, &frame);
-        printf ("page fault %d\n", pf_count);
-        int i;
-        for (i = 0; i < 16; i++) {
-            printf ("age[%d] %d\n", i, age[i].age);
-        }
     }
 
     fetchPage (req_page, frame);
@@ -472,7 +467,7 @@ static void find_remove_aging(int page, int * removedPage, int *frame){
 
     int i;
     for (i = 0; i < VMEM_NFRAMES; i++) {
-        if (age[i].age <= least_refered) {
+        if (age[i].age <= least_refered && age[i].page != VOID_IDX) {
             least_refered = age[i].age;
             *frame = i;
             *removedPage = age[i].page;
