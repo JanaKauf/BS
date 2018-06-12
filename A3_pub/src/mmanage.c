@@ -396,11 +396,11 @@ void vmem_init(void) {
 }
 
 int find_unused_frame() {
-    static int i = -1;
+    static int frame = -1;
 
-    if (i < VMEM_NFRAMES - 1) {
-        i++;
-        return i;
+    if (frame < VMEM_NFRAMES - 1) {
+        frame++;
+        return frame;
     }
 
     return VOID_IDX;
@@ -441,6 +441,7 @@ void removePage(int page) {
     if((vmem->pt[page].flags & PTF_DIRTY) == PTF_DIRTY){
         store_page_to_pagefile (page, &vmem->mainMemory[vmem->pt[page].frame * VMEM_PAGESIZE]);
     }
+
     vmem->pt[page].flags = 0;
     vmem->pt[page].frame = VOID_IDX;
 
@@ -474,8 +475,9 @@ static void find_remove_aging(int page, int * removedPage, int *frame){
         }
     }
 
-    age[*frame].age = 0x80;
     removePage (*removedPage);
+    age[*frame].page = page;
+    age[*frame].age = 0x80;
 }
 
 static void update_age_reset_ref(void) {
