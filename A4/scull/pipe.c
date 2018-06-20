@@ -17,19 +17,20 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 
-#include <linux/kernel.h>   /* printk(), min() */
+#include <linux/kernel.h>	/* printk(), min() */
 #include <linux/sched.h>
-#include <linux/slab.h>     /* kmalloc() */
-#include <linux/fs.h>       /* everything... */
+#include <linux/slab.h>		/* kmalloc() */
+#include <linux/fs.h>		/* everything... */
 #include <linux/proc_fs.h>
-#include <linux/errno.h>    /* error codes */
-#include <linux/types.h>    /* size_t */
+#include <linux/errno.h>	/* error codes */
+#include <linux/types.h>	/* size_t */
 #include <linux/fcntl.h>
 #include <linux/poll.h>
 #include <linux/cdev.h>
 #include <asm/uaccess.h>
+#include <linux/sched/signal.h>
 
-#include "scull.h"      /* local definitions */
+#include "scull.h"		/* local definitions */
 
 struct scull_pipe {
         wait_queue_head_t inq, outq;       /* read and write queues */
@@ -43,11 +44,11 @@ struct scull_pipe {
 };
 
 /* parameters */
-static int scull_p_nr_devs = SCULL_P_NR_DEVS;   /* number of pipe devices */
-int scull_p_buffer =  SCULL_P_BUFFER;           /* buffer size */
-dev_t scull_p_devno;                            /* Our first device number */
+static int scull_p_nr_devs = SCULL_P_NR_DEVS;	/* number of pipe devices */
+int scull_p_buffer =  SCULL_P_BUFFER;	/* buffer size */
+dev_t scull_p_devno;			/* Our first device number */
 
-module_param(scull_p_nr_devs, int, 0);  /* FIXME check perms */
+module_param(scull_p_nr_devs, int, 0);	/* FIXME check perms */
 module_param(scull_p_buffer, int, 0);
 
 static struct scull_pipe *scull_p_devices;

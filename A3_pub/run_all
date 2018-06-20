@@ -47,7 +47,8 @@ for s in $page_sizes ; do
 
          # save pagefaults 
          pagefaults=$(grep "Page fault" logfile.txt | tail -n1 | awk "{ print \$3 }")
-         printf "seed = %6i page_rep_algo = %7s search_algo = %12s pagesize = %4i pagefaults %7s \n" "$seed" "$a" "$sa" "$s" "$pagefaults" >> $all_results
+         g_count=$(grep "Global count" logfile.txt | tail -n1 | awk "{ print\$6 }")
+         printf "seed = %6i page_rep_algo = %7s search_algo = %12s pagesize = %4i pagefaults %7s g_count =  %7s\n" "$seed" "$a" "$sa" "$s" "$pagefaults" "$g_count">> $all_results
 
          # save result files and compare for seed=2806
          mv logfile.txt ./results/logfile_${seed}_${sa}_${a}_${s}.txt  
