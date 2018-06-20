@@ -1,10 +1,13 @@
 #include <linux/init.h>
 #include <linux/module.h>
-#include <linux/moduleparam.h>
-#include <linux/device.h>
-#include <linux/kernel.h>
+
 #include <linux/fs.h>
 #include <linux/cdev.h>
+
+#include <linux/moduleparam.h>
+
+#include <linux/device.h>
+#include <linux/kernel.h>
 #include <linux/fcntl. h>
 #include <linux/mutex.h>
 #include <linux/uaccess.h>
@@ -14,68 +17,31 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Janaina, Vadim");
 
-static int major_number;
-static dev_t device_number;
-static struct cdev* trans_cdev;
-static DEFINE_MUTEX(mutex);
-bool read = false;
-bool write = false;
-int error;
+int rot = SHIFT;
+module_param(rot, int, 0644);
 
-static int dev_open(struct inode *, struct file *);
-static int dev_release(struct inode *, struct file *);
-static int dev_read(struct file *, char *, size_t, loff_t *);
-static int dev_write(struct file *, const char *, size_t, loff_t *);
-
-
-static struct file_operations fops =
-{
-    .owner = THIS_MODULE,
-    .open = dev_open,
-    .read = dev_read,
-    .write = dev_write,
-    .release = dev_release,
-};
-
-static int __init translate_init(void){
-    printk(KERN_INFO "trans : Initializing the Translate LKM\n");
-
-    // Try to dynamically allocate a major number for the device
-    error = alloc_chrdev_region(&device_number, 0, 1, DEVICE_NAME);
-    if (error < 0) {
-        PDEBUG("trans : Fail to allocate major_number");
-        return error;
-   }
-
-    major_number = MAJOR(device_number);
-    PDEBUG("trans : device name-> %s, major number-> %d\n", DEVICE_NAME, major_number);
-
-    trans_cdev = cdev_alloc();
-    trans_cdev->ops = &fops;
-    trans_cdev->owner = THIS_MODULE;
-
-    error = cdev_add(trans_cdev, device_number);
-    if (error < 0) {
-        PDEBUG("trans : could not add to kernel\n");
-        return error;
-    }
-
-    mutex_init(&mutex);
-    return 0;
-
+struct trans_data {
+    struct cdev trans_cdev;
+    struct cdev* trans_cdev;
+    DEFINE_MUTEX(mutex);
+    bool read = false;
+    bool write = false;
 }
 
-static void __exit translate_exit (void) {
-    cdev_del(trans_cdev);
-    unregister_chrdev_region(device_number, 1);
-    mutex_unlock(&mutex);
-    mutex_destroy(&mutex);
+int trans_major;
 
-    PDEBUG("trans : module exit\n");
-}
+struct trans_data devices[TRANS_NR_DEVS];
 
-static int dev_open(struct inode * inode, struct file *filp) {
-    PDEBUG("trans : open device");
+int
+trans_open(struct inode * inode, struct file * filp) {
+    PDEBUG("open device\n");
+
+    struct trans_data * trans_data;
+
+    trans_data = container_of(inode->i_cdev, struct trans_data, cdev);
+
+    filp->private_data = trans_data;
+
     mutex_lock(&mutex);
     if (filp->f_mode & FMODE_READ) {
         if(read) {
@@ -99,18 +65,79 @@ static int dev_open(struct inode * inode, struct file *filp) {
 
 }
 
-static int dev_read(struct file *, char *, size_t, loff_t *) {
+int
+trans_release(struct inode * inode, struct file * filp){
+
+    return 0;
+}
+
+ssize_t
+trans_read(struct file * filp, char __user * buf, size_t count, loff_t * f_pos){
+    PDEBUG("reading from device\n");
+
+    struct trans_data * trans_data;
+
+    trans_data = (struct trans_data *) filp->private_data;
+
+    mutex_lock(&mutex);
+    if (copy_to_user()) {
+
+    }
+
+    return 0;
+}
+
+ssize_t
+trans_write(struct file *filp, const char __user * buf, size_t count, loff_t * f_pos){
+
+    return count;
+}
+
+static struct file_operations fops =
+{
+    .owner = THIS_MODULE,
+    .open = trans_open,
+    .read = trans_read,
+    .write = trans_write,
+    .release = trans_release,
+};
+
+
+int
+__init trans_init(void){
+    PDEBUG("Initializing the Translate LKM\n");
+    int err, i;
+    dev_t dev = 0;
+
+    // Try to dynamically allocate a major number for the device
+    err = alloc_chrdev_region(&dev, 0, 1, DEVICE_NAME);
+    if (err < 0) {
+        PDEBUG("Fail to allocate trans_major\n");
+        return err;
+   }
+
+    trans_major = MAJOR(dev);
+    PDEBUG("device name-> %s, major number-> %d\n", DEVICE_NAME, trans_major);
+
+    for (i = 0; i < TRANS_NR_DEVS; i++) {
+        cdev_init(&devices[i].trans_cdev, &fops);
+        cdev_add(&devices[i].trans_cdev, dev);
+    }
+
+    mutex_init(&mutex);
+    return 0;
 
 }
 
-static int dev_write(struct file *, const char *, size_t, loff_t *) {
+void
+__exit trans_exit (void) {
+    cdev_del(trans_cdev);
+    unregister_chrdev_region(device_number, 1);
+    mutex_unlock(&mutex);
+    mutex_destroy(&mutex);
 
+    PDEBUG("module exit\n");
 }
 
-static int dev_release(struct inode *, struct file *) {
-
-}
-
-
-module_init(translate_init);
-module_exit(translate_exit);
+module_init(trans_init);
+module_exit(trans_exit);
