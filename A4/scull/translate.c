@@ -8,11 +8,10 @@
 
 #include <linux/device.h>
 #include <linux/kernel.h>
-#include <linux/fcntl. h>
-#include <linux/mutex.h>
-#include <linux/uaccess.h>
-#include <stdbool.h>
-#include "translate.h"
+#include <llinux/uaccess.h>
+
+#define DEVICE_NAME "trans"
+#define CLASS_NAME "transclass"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Janaina, Vadim");
@@ -20,17 +19,12 @@ MODULE_AUTHOR("Janaina, Vadim");
 int rot = SHIFT;
 module_param(rot, int, 0644);
 
-struct trans_data {
-    struct cdev trans_cdev;
-    struct cdev* trans_cdev;
-    DEFINE_MUTEX(mutex);
-    bool read = false;
-    bool write = false;
-}
-
-int trans_major;
-
-struct trans_data devices[TRANS_NR_DEVS];
+static int trans_majorNr;
+static char msg[40] = {0};
+static size_of_msg;
+static int count_opens = 0;
+static struct class * transcharClass = NULL;
+static struct device * transcharDevice = NULL;
 
 int
 trans_open(struct inode * inode, struct file * filp) {
@@ -105,7 +99,21 @@ static struct file_operations fops =
 
 int
 __init trans_init(void){
-    PDEBUG("Initializing the Translate LKM\n");
+    printk(KERN_INFO "trans: on function %s \n", __FUNCTION__);
+    int err, i;
+    dev_t dev = 0;
+
+    // Try to dynamically allocate a major number for the device
+    err = alloc_chrdev_region(&dev, 0, 1, DEVICE_NAME);
+    trans_major = MAJOR(dev);
+    if (err < 0) {
+        PDEBUG("Fail to allocate trans_major\n");
+        return err;
+   }
+
+    PDEBUG("device name-> %s, major number-> %d\n", DEVICE_NAME, trans_major);
+
+    /*PDEBUG("Initializing the Translate LKM\n");
     int err, i;
     dev_t dev = 0;
 
@@ -119,14 +127,12 @@ __init trans_init(void){
     trans_major = MAJOR(dev);
     PDEBUG("device name-> %s, major number-> %d\n", DEVICE_NAME, trans_major);
 
-    for (i = 0; i < TRANS_NR_DEVS; i++) {
-        cdev_init(&devices[i].trans_cdev, &fops);
-        cdev_add(&devices[i].trans_cdev, dev);
-    }
+    cdev_init(&devices[i].trans_cdev, &fops);
+    cdev_add(&devices[i].trans_cdev, dev);
 
     mutex_init(&mutex);
     return 0;
-
+*/
 }
 
 void

@@ -1,0 +1,10 @@
+[default]
+name=Default
+runtime=host
+config-opts=
+run-opts=
+prefix=/home/skuld/.cache/gnome-builder/install/teil01/host
+app-id=
+postbuild=
+prebuild=
+default=true

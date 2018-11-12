@@ -10,6 +10,9 @@
 /*
  * Macros to help debugging
  */
+#define PRINT_DEBUG \
+       printk (KERN_DEBUG "[% s]: FUNC:% s: LINE:% d \ n", __FILE__,
+               __FUNCTION__, __LINE__)
 
 #undef PDEBUG             /* undef it, just in case */
 #ifdef SCULL_DEBUG
